@@ -2,14 +2,11 @@ package ca.apprajapati.recyclerview
 
 import android.os.Bundle
 import android.util.Log
-import android.view.LayoutInflater
-import android.widget.LinearLayout
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.recyclerview.widget.ItemTouchHelper
-import androidx.recyclerview.widget.ItemTouchUIUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import ca.apprajapati.recyclerview.databinding.ActivityMainBinding
 
@@ -30,12 +27,32 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
-        val adapter = ItemsAdapter((1..7).toList())
+        val editButton = ActionButton(this, ContextCompat.getDrawable(this, R.drawable.edit)!!) {
+            Log.d("Ajay", "Edit button is clicked")
+        }
+
+
+        val deleteButton = ActionButton(this, ContextCompat.getDrawable(this, R.drawable.ic_delete)!!) {
+            Log.d("Ajay", "Delete button is clicked")
+        }
+
+        val archiveButton = ActionButton(this, ContextCompat.getDrawable(this, R.drawable.ic_archive)!!) {
+            Log.d("Ajay", "Delete button is clicked")
+        }
+
+        val itemHelper = HolderItemHelper(this, listOf(deleteButton, editButton, archiveButton))
+
+        val adapter = ItemsAdapter((1..7).toList()) {
+            position ->
+                Log.d("Ajay", "Clicked item $position")
+//                itemHelper.swipeRecyclerviewItem(position, distance = 200, time = 500)
+                val holder = binding.itemsRecyclerview.findViewHolderForAdapterPosition(position)
+        }
 
         binding.itemsRecyclerview.adapter = adapter
         binding.itemsRecyclerview.layoutManager = LinearLayoutManager(this)
 
-        HolderItemHelper().attachToRecyclerView(binding.itemsRecyclerview)
+        itemHelper.attachToRecyclerView(binding.itemsRecyclerview)
     }
 
 }

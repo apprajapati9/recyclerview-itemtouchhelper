@@ -5,8 +5,10 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import ca.apprajapati.recyclerview.databinding.RecyclerviewItemLayoutBinding
 
-class ItemsAdapter(private val items: List<Int> = arrayListOf()) :
-    RecyclerView.Adapter<ItemsAdapter.ItemHolder>() {
+class ItemsAdapter(
+    private val items: List<Int> = arrayListOf(),
+    private val onClick: (Int) -> Unit
+) : RecyclerView.Adapter<ItemsAdapter.ItemHolder>() {
 
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ItemHolder {
@@ -19,6 +21,12 @@ class ItemsAdapter(private val items: List<Int> = arrayListOf()) :
         val item = items[position]
 
         holder.binding.itemName.text = item.toString()
+
+        holder.binding.itemName.setOnClickListener {
+            onClick.invoke(position)
+        }
+
+
     }
 
     class ItemHolder(val binding: RecyclerviewItemLayoutBinding) :

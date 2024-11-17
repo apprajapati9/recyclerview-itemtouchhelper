@@ -1,29 +1,71 @@
 package ca.apprajapati.recyclerview
 
+import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.PointF
 import android.graphics.RectF
+import android.graphics.drawable.Drawable
 import android.util.Log
+import android.view.GestureDetector
+import android.view.GestureDetector.SimpleOnGestureListener
+import android.view.MotionEvent
+import android.view.View
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
+import ca.apprajapati.recyclerview.util.UiUtil
 
-class HolderItemHelper : ItemTouchHelper.Callback() {
+class HolderItemHelper(
+    private val context: Context,
+    private val actionButtons: List<ActionButton>
+) :
+    ItemTouchHelper.Callback() {
 
-    private var mRecyclerView : RecyclerView ?= null
-    //private val rvListener : RecyclerViewListener ?= null
 
-    private val paint  = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    private var mRecyclerView: RecyclerView? = null
+    private var gestureDetector: GestureDetector? = null
+
+    private val buttons = emptyMap<Int, List<ActionButton>>()
+    private var buttonWidth = 0
+
+    private val buttonDistance = UiUtil.dpToPx(context, 4f)
+
+    private val backgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        //color = Color.WHITE
+        color = Color.GREEN
+        style = Paint.Style.FILL
+    }
+
+    private val dividerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.BLUE
         style = Paint.Style.FILL
     }
+
+
+    init {
+        gestureDetector = GestureDetector(context, object : SimpleOnGestureListener() {
+
+            override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
+
+                return true
+            }
+        })
+        buttonWidth = UiUtil.dpToPx(context, 72f)
+    }
+
 
     override fun getMovementFlags(
         recyclerView: RecyclerView,
         viewHolder: RecyclerView.ViewHolder
     ): Int {
-        val swipeFlags = ItemTouchHelper.START // towards start, means towards left
+        val swipeFlags =
+            ItemTouchHelper.START or ItemTouchHelper.END // towards start, means towards left
         return makeFlag(ItemTouchHelper.ACTION_STATE_SWIPE, swipeFlags)
+    }
+
+    override fun getSwipeThreshold(viewHolder: RecyclerView.ViewHolder): Float {
+        return 0.4f
     }
 
     override fun isLongPressDragEnabled(): Boolean = false
@@ -48,6 +90,23 @@ class HolderItemHelper : ItemTouchHelper.Callback() {
         helper.attachToRecyclerView(mRecyclerView)
     }
 
+
+    override fun onChildDrawOver(
+        c: Canvas,
+        recyclerView: RecyclerView,
+        viewHolder: RecyclerView.ViewHolder?,
+        dX: Float,
+        dY: Float,
+        actionState: Int,
+        isCurrentlyActive: Boolean
+    ) {
+        super.onChildDrawOver(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive)
+    }
+
+    /*
+        Dx - displacement X on swiped flag side. If START, then left side which becomes - (negative)
+             if Right side, then Dx becomes + (positive)
+     */
     override fun onChildDraw(
         c: Canvas,
         recyclerView: RecyclerView,
@@ -57,48 +116,223 @@ class HolderItemHelper : ItemTouchHelper.Callback() {
         actionState: Int,
         isCurrentlyActive: Boolean
     ) {
-        super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive)
 
-        val position = viewHolder.adapterPosition
+        val position = viewHolder.adapterPosition  //adapter position
+        var translationX = dX
 
-        val viewHolderItemTop =  viewHolder.itemView.top.toFloat() //top gives top pixel of view holder
+        val itemView = viewHolder.itemView
 
-        val viewHolderItemWidth = viewHolder.itemView.width.toFloat()
-        val viewHolderItemHeight = viewHolder.itemView.height.toFloat()
 
-        val viewHolderItemBottom = viewHolder.itemView.bottom.toFloat()
-
-        val underlyingButton = UnderlyingButton(buttonSize = RectF(viewHolderItemWidth,viewHolderItemTop,viewHolderItemWidth + 50f, viewHolderItemTop + 50f), buttonBackgroundColor = viewHolder.itemView.context.getColor(android.R.color.holo_blue_dark))
-
-        if(isCurrentlyActive){
-            c.save()
-            c.drawRect(viewHolderItemWidth-dX, viewHolderItemTop, viewHolderItemWidth + dX, viewHolderItemBottom, paint)
-            //top+height OR viewHolder.itemView.bottom will work as well.
-
-            c.restore()
-
-            //1440-80 = 1360 -- starting width.
-            //1440+80 = 1520 -- ending width
+        if (position < 0) {
+            // we don't do anything.
+            return
         }
 
-        Log.d("Ajay", "Dx - $dX, Dy - $dY, position - $position, start w- ${viewHolderItemWidth-dX}, endW -> ${viewHolderItemWidth + dX}") // swiping towards right so Dx becomes minus.
+        if (actionState == ItemTouchHelper.ACTION_STATE_SWIPE) {
+
+            if (dX > 0) { // when viewHolder moves towards right, x becomes positive so swipe right.
+
+                translationX = dX * actionButtons.size * buttonWidth / itemView.width
+                Log.d(
+                    "Ajay", "itemView width -> ${itemView.width}, " +
+                            "TranslationX -> $translationX, " +
+                            "buttonWidth -> $buttonWidth, " +
+                            "dX -> $dX"
+                )
+
+                drawButtons(canvas = c, itemView = itemView, position, translationX)
+            }
+
+        }
+
+        super.onChildDraw(
+            c,
+            recyclerView,
+            viewHolder,
+            translationX,
+            dY,
+            actionState,
+            isCurrentlyActive
+        )
+    }
+
+    private fun drawButtons(
+        canvas: Canvas,
+        itemView: View,
+        pos: Int,
+        dX: Float
+    ) {
+
+        //draw background
+
+        canvas.drawRect(
+            itemView.left.toFloat(),
+            itemView.top.toFloat(),
+            dX,
+            itemView.bottom.toFloat(),
+            backgroundPaint
+        )
+
+//        backgroundPaint.color = Color.WHITE
+//
+//        canvas.drawRect(itemView.left.toFloat() + dX , itemView.top.toFloat(), itemView.right.toFloat(), itemView.bottom.toFloat(), backgroundPaint)
+//
+//        backgroundPaint.color = Color.GREEN
+
+
+        //draw action buttons
+        var buttonLeft = itemView.left
+        for (i in actionButtons.indices) {
+            val right = buttonLeft + buttonWidth
+
+            canvas.clipRect(itemView.left, itemView.top, dX.toInt(), itemView.bottom)
+            actionButtons[i].draw(
+                canvas = canvas,
+                itemSize = RectF(
+                    buttonLeft.toFloat(),
+                    itemView.top.toFloat(),
+                    right.toFloat(),
+                    itemView.bottom.toFloat()
+                ),
+                buttonNumber = i,
+                count = actionButtons.size,
+                position = pos
+            )
+
+            buttonLeft = right
+        }
     }
 
 }
 
+class ActionButton(
+    private val context: Context,
+    private var imageId: Drawable,
+    private val onButtonClicked: (position: Int) -> Unit
+) {
 
-class UnderlyingButton(
-    val buttonName: String?= "",
-    val buttonSize : RectF,
-    val buttonBackgroundColor: Int,
-    val buttonImage: Int? = -1, )
-{
+    private var position = -1
+    private var clickRegion = RectF()
+    private var iconSize = 0
+    private var backgroundSize = 0
+    private var backgroundRadius = 0
+    private var buttonDistance = 0
+
+    init {
+
+        iconSize = UiUtil.dpToPx(context, 24f)
+        buttonDistance = UiUtil.dpToPx(context, 4f)
+        backgroundSize = UiUtil.dpToPx(context, 48f) //TODO: dynamic?
+    }
+
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE //TODO: clear androidx.
+    }
+
+    private fun onClick(buttonPosition: PointF): Boolean {
+        if (clickRegion.contains(buttonPosition.x, buttonPosition.y)) {
+            onButtonClicked.invoke(position)
+            return true
+        }
+        return false
+    }
+
+    fun draw(canvas: Canvas, itemSize: RectF, count: Int, buttonNumber: Int, position: Int) {
+
+        canvas.save()
+        val offsetX = if (count == 2) {
+            if (buttonNumber == 0) {
+                buttonDistance
+            } else {
+                -buttonDistance
+            }
+        } else 0
+
+        // draw round background
+
+        val centerX = itemSize.centerX() + offsetX
+        val centerY = itemSize.centerY()
+
+        val sizeHalf = backgroundSize / 2 //background around the image icons.
+
+        //Tweak rx,ry to add more rounded radius
+        paint.alpha = 100
+        canvas.drawRoundRect(
+            centerX - sizeHalf,
+            centerY - sizeHalf,
+            centerX + sizeHalf,
+            centerY + sizeHalf,
+            2f,
+            2f,
+            paint
+        )
+        paint.alpha = 255
 
 
-    fun draw(canvas: Canvas){
-//        canvas.drawRect(buttonSize.left, buttonSize.top, buttonSize.right, buttonSize.bottom, Paint().apply { style = Paint.Style.FILL
-//        color = Color.BLUE})
-        canvas.drawColor(buttonBackgroundColor)
+        //draw icon
+        imageId.setBounds(
+            (itemSize.centerX() - iconSize / 2f + offsetX).toInt(),
+            (itemSize.top + (itemSize.bottom - itemSize.top - iconSize) / 2).toInt(),
+            ((itemSize.centerX() - iconSize / 2f + offsetX) + iconSize).toInt(),
+            ((itemSize.top + (itemSize.bottom - itemSize.top - iconSize) / 2) + iconSize).toInt()
+        )
+
+        imageId.draw(canvas)
+        canvas.restore()
+
+        clickRegion = itemSize
+        this.position = position
     }
 
 }
+
+//TODO: refactor to see if you can use lambda function because it has only 1 method
+interface OnSwipeListener {
+    fun onSwipeStartedOrEnabled(started: Boolean)
+}
+
+//interface UnderlyingButtonClickListener{
+//    fun onClick
+//}
+
+
+//    fun swipeRecyclerviewItem(index: Int, distance: Int, direction: Int ?= ItemTouchHelper.START, time: Long){
+//        val childView = mRecyclerView?.findViewHolderForAdapterPosition(index)?.itemView!!
+//
+//        val x = childView.top.toFloat()
+//        val y =  childView.top.toFloat()
+//        Log.d("Ajay", "x -> $x  y -> $y")
+//        val downTime = SystemClock.uptimeMillis()
+//
+//        mRecyclerView?.dispatchTouchEvent(
+//            MotionEvent.obtain(
+//                downTime,
+//                downTime,
+//                MotionEvent.ACTION_DOWN,
+//                x,
+//                y,
+//                0
+//            )
+//        )
+//        ValueAnimator.ofInt(0, distance).apply {
+//            duration = time
+//            addUpdateListener {
+//                val dX = it.animatedValue as Int
+//                val mX = when (direction) {
+//                    ItemTouchHelper.END -> x + dX
+//                    ItemTouchHelper.START -> x - dX
+//                    else -> 0F
+//                }
+//                mRecyclerView?.dispatchTouchEvent(
+//                    MotionEvent.obtain(
+//                        downTime,
+//                        SystemClock.uptimeMillis(),
+//                        MotionEvent.ACTION_MOVE,
+//                        mX,
+//                        y,
+//                        0
+//                    )
+//                )
+//            }
+//        }.start()
+//    }
