@@ -6,7 +6,7 @@ import androidx.recyclerview.widget.RecyclerView
 import ca.apprajapati.recyclerview.databinding.RecyclerviewItemLayoutBinding
 
 class ItemsAdapter(
-    private val items: List<Int> = arrayListOf(),
+    private val items: MutableList<Int> = mutableListOf<Int>(),
     private val onClick: (Int) -> Unit
 ) : RecyclerView.Adapter<ItemsAdapter.ItemHolder>() {
 
@@ -25,8 +25,11 @@ class ItemsAdapter(
         holder.binding.itemName.setOnClickListener {
             onClick.invoke(position)
         }
+    }
 
-
+    fun removeItem(position: Int) {
+        items.removeAt(position)
+        notifyItemRemoved(position)
     }
 
     class ItemHolder(val binding: RecyclerviewItemLayoutBinding) :
@@ -42,7 +45,6 @@ class ItemsAdapter(
                 return ItemHolder(binding)
             }
         }
-
     }
 
 }
