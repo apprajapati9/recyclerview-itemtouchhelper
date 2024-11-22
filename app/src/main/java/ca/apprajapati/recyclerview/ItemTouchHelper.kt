@@ -1,11 +1,16 @@
 package ca.apprajapati.recyclerview
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Point
 import android.graphics.PointF
+import android.graphics.Rect
 import android.graphics.RectF
+import android.graphics.Shader
+import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import android.util.Log
 import android.view.GestureDetector
@@ -29,6 +34,8 @@ class HolderItemHelper(
     private var buttonWidth = 0
 
     private var swipedPosition = -1
+
+    private var threshold = 0f
 
     private val buttonDistance = UiUtil.dpToPx(context, 4f)
 
@@ -57,9 +64,9 @@ class HolderItemHelper(
     }
 
     private val colors = mutableListOf<Int>().apply {
-        add(Color.BLUE)
-        add(Color.GREEN)
-        add(Color.RED)
+        add(Color.parseColor("#ff5733"))
+        add(Color.parseColor("#f4bd47"))
+        add(Color.parseColor("#5769bd")) //blue
     }
 
     init {
@@ -90,10 +97,6 @@ class HolderItemHelper(
         return makeFlag(ItemTouchHelper.ACTION_STATE_SWIPE, swipeFlags)
     }
 
-    override fun getSwipeThreshold(viewHolder: RecyclerView.ViewHolder): Float {
-        return 0.4f
-    }
-
     override fun isLongPressDragEnabled(): Boolean = false
     override fun isItemViewSwipeEnabled(): Boolean = true
 
@@ -102,7 +105,7 @@ class HolderItemHelper(
         viewHolder: RecyclerView.ViewHolder,
         target: RecyclerView.ViewHolder
     ): Boolean {
-        TODO("Not yet implemented")
+        return false
     }
 
     override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
@@ -117,7 +120,9 @@ class HolderItemHelper(
         } else {
             swipedPosition = position
         }
+
     }
+
 
     override fun onSelectedChanged(viewHolder: RecyclerView.ViewHolder?, actionState: Int) {
         super.onSelectedChanged(viewHolder, actionState)
@@ -162,12 +167,8 @@ class HolderItemHelper(
         var translationX = dX
 
         val itemView = viewHolder.itemView
+        itemView.elevation = 10f
 
-
-        if (position < 0) {
-            // we don't do anything.
-            return
-        }
 
         if (actionState == ItemTouchHelper.ACTION_STATE_SWIPE) {
 
@@ -189,20 +190,27 @@ class HolderItemHelper(
                 )
             } else {
 
-                translationX = (dX * 3 * buttonWidth) / itemView.width
+                translationX = (dX * actionButtons.size * buttonWidth) / itemView.width
                 val reverseX = -translationX
-                val fraction = reverseX / 3
+                val fraction = reverseX / actionButtons.size
 
 
                 var left =
                     itemView.right.toFloat() // from width x that goes towards right when swiping left
                 var right = itemView.width.toFloat() // right side width
+
                 val str = "Ajay"
+
+                var textPlaceStart = left
+                var textPlaceX =  fraction/ 4
 
                 Log.d("Ajay", "translation x -> $reverseX, sum -> $left ")
                 for (i in 0..2) {
                     left -= fraction //decreasing by number of items thus right to left, right side being width of itemView and left being -fraction towards left side. i.e if width of screen is 1440, then 1440 - 20 is left. 1440 is right.
+
                     backgroundPaint.color = colors[i]
+                    c.save()
+                    c.clipRect(left, itemView.top.toFloat(), right, itemView.bottom.toFloat())
 
                     c.drawRect(
                         right,
@@ -212,18 +220,40 @@ class HolderItemHelper(
                         backgroundPaint
                     )
 
-                    dividerPaint.textSize = UiUtil.dpToPx(context = context, 10f).toFloat()
+
+                    dividerPaint.textSize = UiUtil.dpToPx(context = context, 20f).toFloat()
+                    val textWidth = dividerPaint.measureText(str)
+
+                    val rect = Rect()
+                    dividerPaint.getTextBounds(str, 0, str.length, rect)
+
+//                    c.drawLine(left, itemView.top.toFloat(), right, itemView.bottom.toFloat(), dividerPaint)
+//                    c.drawLine(right, itemView.top.toFloat(), left, itemView.bottom.toFloat(), dividerPaint)
+
+                    dividerPaint.color = Color.WHITE
+                    dividerPaint.setTypeface(Typeface.create(Typeface.DEFAULT,Typeface.BOLD))
+//
                     c.drawText(
                         str,
                         0,
                         str.length,
-                        right - fraction / 2,
-                        itemView.top.toFloat() + (itemView.height / 2),
+                        left + textPlaceX,
+                        (itemView.top.toFloat() + itemView.height / 2)  + (rect.height()/2) ,
                         dividerPaint
                     )
+//
+//                    dividerPaint.color = Color.WHITE
+//                    c.drawText(
+//                        str,
+//                        0,
+//                        str.length,
+//                        left + (right-left)/2 - (textWidth/2),
+//                        (itemView.top.toFloat() + itemView.height / 2)  + (rect.height()/2) ,
+//                        dividerPaint
+//                    )
+                    c.restore()
 
                     right = left
-                    Log.d("Ajay", "counter i-> $i ")
 
                 }
 
@@ -241,6 +271,7 @@ class HolderItemHelper(
             isCurrentlyActive
         )
     }
+
 
     private fun drawButtons(
         canvas: Canvas,
