@@ -191,6 +191,8 @@ class HolderItemHelper(
             } else {
 
                 translationX = (dX * actionButtons.size * buttonWidth) / itemView.width
+                val fullButtonSize = actionButtons.size * buttonWidth
+                Log.d("Ajay", "translationX -> $translationX, all button size-> $fullButtonSize")
                 val reverseX = -translationX
                 val fraction = reverseX / actionButtons.size
 
@@ -202,9 +204,9 @@ class HolderItemHelper(
                 val str = "Ajay"
 
                 var textPlaceStart = left
-                var textPlaceX =  fraction/ 4
+                var textPlaceX = fraction / 4
 
-                Log.d("Ajay", "translation x -> $reverseX, sum -> $left ")
+                //Log.d("Ajay", "translation x -> $reverseX, left -> $left, right -> $right ")
                 for (i in 0..2) {
                     left -= fraction //decreasing by number of items thus right to left, right side being width of itemView and left being -fraction towards left side. i.e if width of screen is 1440, then 1440 - 20 is left. 1440 is right.
 
@@ -213,9 +215,9 @@ class HolderItemHelper(
                     c.clipRect(left, itemView.top.toFloat(), right, itemView.bottom.toFloat())
 
                     c.drawRect(
-                        right,
-                        itemView.top.toFloat(),
                         left,
+                        itemView.top.toFloat(),
+                        right,
                         itemView.bottom.toFloat(),
                         backgroundPaint
                     )
@@ -231,28 +233,24 @@ class HolderItemHelper(
 //                    c.drawLine(right, itemView.top.toFloat(), left, itemView.bottom.toFloat(), dividerPaint)
 
                     dividerPaint.color = Color.WHITE
-                    dividerPaint.setTypeface(Typeface.create(Typeface.DEFAULT,Typeface.BOLD))
+                    dividerPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD))
 //
+
+                    //left + fraction / actionButtons.size  == LEFT side reveal
+                    // left + textPlaceX  ==  left size reveal
+                    //right - fullButtonSize.toFloat() / 3 + textWidth / 2 == RIGHT side reveal
                     c.drawText(
                         str,
                         0,
                         str.length,
-                        left + textPlaceX,
-                        (itemView.top.toFloat() + itemView.height / 2)  + (rect.height()/2) ,
+                        right - fullButtonSize.toFloat() / 3 + textWidth / 3, //fraction 20, every iteration - right left 1440- 1420, 1420-1400, 1400- 1388
+                        (itemView.top.toFloat() + itemView.height / 2) + (rect.height() / 2),
                         dividerPaint
                     )
-//
-//                    dividerPaint.color = Color.WHITE
-//                    c.drawText(
-//                        str,
-//                        0,
-//                        str.length,
-//                        left + (right-left)/2 - (textWidth/2),
-//                        (itemView.top.toFloat() + itemView.height / 2)  + (rect.height()/2) ,
-//                        dividerPaint
-//                    )
+
                     c.restore()
 
+                    Log.d("Ajay", "fraction -> $fraction , right -> $right , left -> $left")
                     right = left
 
                 }
